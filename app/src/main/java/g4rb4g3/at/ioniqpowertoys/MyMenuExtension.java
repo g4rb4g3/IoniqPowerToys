@@ -2,7 +2,11 @@ package g4rb4g3.at.ioniqpowertoys;
 
 import android.app.AndroidAppHelper;
 import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.LinearLayout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +18,7 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
@@ -24,10 +29,15 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
 
   public static final String CLASS_LAUNCHER_APPDATAENUM = "com.lge.ivi.launcher.item.MyMenuAppDataEnum";
   public static final String CLASS_LAUNCHER_MYMENUACTIVITY = "com.lge.ivi.launcher.activity.MyMenuActivity";
+  public static final String CLASS_LAUNCHER_MAINACTIVITY = "com.lge.ivi.launcher.activity.MainActivity";
 
   public static final int CLASS_LAUNCHER_RESID_MIRRORLINKTITLE = 2131165292;
   public static final int CLASS_LAUNCHER_RESID_ICON_NAVI = 2130837809;
   public static final int CLASS_LAUNCHER_RESID_ICON_NAVINOR = 2130837712;
+  public static final int MIN_DISTANCE = 50;
+
+  private Class<?> mClassMyMenuActivity;
+  private float mDownY, mUpY;
 
   @Override
   public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -50,8 +60,8 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
     });
 
     //override onclick method in my menu activity so our added apps can be started
-    Class<?> classMyMenuActivity = findClass(CLASS_LAUNCHER_MYMENUACTIVITY, lpparam.classLoader);
-    findAndHookMethod(classMyMenuActivity, "onClick", android.view.View.class, new XC_MethodHook() {
+    mClassMyMenuActivity = findClass(CLASS_LAUNCHER_MYMENUACTIVITY, lpparam.classLoader);
+    findAndHookMethod(mClassMyMenuActivity, "onClick", android.view.View.class, new XC_MethodHook() {
       @Override
       protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
         View button = (View) param.args[0];
@@ -68,6 +78,36 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
         }
       }
     });
+
+    //add ontouch listener to all menu button so a swipe from bottom to top will open my menu app
+    Class<?> classMainActivity = findClass(CLASS_LAUNCHER_MAINACTIVITY, lpparam.classLoader);
+    findAndHookMethod(classMainActivity, "onCreate", Bundle.class, new XC_MethodHook() {
+      @Override
+      protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        LinearLayout allMenus = (LinearLayout) getObjectField(param.thisObject, "gY");
+        allMenus.setOnTouchListener(new View.OnTouchListener() {
+          @Override
+          public boolean onTouch(View v, MotionEvent event) {
+            switch (event.getAction()) {
+              case MotionEvent.ACTION_DOWN: {
+                mDownY = event.getY();
+              }
+              case MotionEvent.ACTION_UP: {
+                mUpY = event.getY();
+                float deltaY = mDownY - mUpY;
+                if (Math.abs(deltaY) > MIN_DISTANCE && deltaY > 0) {
+                  //BottomToTopSwipe
+                  launchMyMenu();
+                  return true;
+                }
+              }
+            }
+
+            return false;
+          }
+        });
+      }
+    });
   }
 
   @Override
@@ -76,5 +116,13 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
       return;
     }
     resparam.res.setReplacement(CLASS_LAUNCHER_RESID_MIRRORLINKTITLE, "ABRP");
+  }
+
+  private void launchMyMenu() {
+    Context context = AndroidAppHelper.currentApplication().getApplicationContext();
+    Intent intent = new Intent(context, mClassMyMenuActivity);
+    intent.setFlags(FLAG_ACTIVITY_NEW_TASK);
+    intent.putExtra("fromMenu", "none");
+    context.startActivity(intent);
   }
 }
