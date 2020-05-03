@@ -2,8 +2,6 @@ package g4rb4g3.at.ioniqpowertoys;
 
 import android.inputmethodservice.Keyboard;
 
-import com.lge.ivi.media.ExtMediaManager;
-
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;

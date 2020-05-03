@@ -32,8 +32,8 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
   public static final String CLASS_LAUNCHER_MAINACTIVITY = "com.lge.ivi.launcher.activity.MainActivity";
 
   public static final int CLASS_LAUNCHER_RESID_MIRRORLINKTITLE = 2131165292;
-  public static final int CLASS_LAUNCHER_RESID_ICON_NAVI = 2130837809;
-  public static final int CLASS_LAUNCHER_RESID_ICON_NAVINOR = 2130837712;
+  public static final int CLASS_LAUNCHER_RESID_ICON_NAVI = 2130837811;
+  public static final int CLASS_LAUNCHER_RESID_ICON_NAVINOR = 2130837713;
   public static final int MIN_DISTANCE = 50;
 
   private Class<?> mClassMyMenuActivity;
@@ -66,9 +66,9 @@ public class MyMenuExtension implements IXposedHookLoadPackage, IXposedHookInitP
       protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
         View button = (View) param.args[0];
         if (button.getTag() != null) {
-          ArrayList hk = (ArrayList) getObjectField(param.thisObject, "hk");
+          ArrayList hl = (ArrayList) getObjectField(param.thisObject, "hl");
           int index = Integer.valueOf(button.getTag().toString());
-          Object item = hk.get(index);
+          Object item = hl.get(index);
           String pkgName = (String) getObjectField(item, "pakageName");
           if (PKG_NAME_ABRP.equals(pkgName)) {
             param.setResult(null);
